@@ -26,7 +26,7 @@ Exemplo de body - json.
 
 
 ```mermaid
-  graph TD  
+  graph LR  
   
     %% PRE-LAUNCH SETUP" FLOW CHART SHAPES  
     START["criar<br>usuário"]  
@@ -93,7 +93,7 @@ Nesse ponto, será verificada a validade da sessão e se confirmada a memsma é 
 
 
 ``` mermaid
-  graph TD  
+  graph LR  
   
     %% PRE-LAUNCH SETUP" FLOW CHART SHAPES  
     RECEIVED_EMAIL["validar<br>usuário"]  
