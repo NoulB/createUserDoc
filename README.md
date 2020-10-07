@@ -29,7 +29,7 @@ Exemplo de body - json.
 
   
 ```mermaid
-  graph LR  
+  graph TD  
   
     %% PRE-LAUNCH SETUP" FLOW CHART SHAPES  
     START["cria<br>usuario"]  
@@ -102,7 +102,7 @@ exemplo de body - json.
 ```
 
 ``` mermaid
-  graph LR  
+  graph TD  
   
     %% PRE-LAUNCH SETUP" FLOW CHART SHAPES  
     RECEIVED_EMAIL["validar<br>usuario"]  
