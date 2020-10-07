@@ -1,20 +1,18 @@
-
 # Criação de usuários no Heimdall v2!
 Dentro do ambiente da Zoop, um marketplace pode ter a necessidade de permitir que terceiros (normalmente funcionários ou sócios) tenham acesso ao painel do dashboard para fins de visualização ou gerenciamento do marketplace ou de um seller. Visando isso, foi desenvolvida a feature de criação de usuários, onde um marketplace pode realizar o pré cadastro de usuário, enviando um convite para que o mesmo possa contribuir com as atividades do marketplace ou de um seller específico.
 
-O controle de usuários do Heimdall utiliza o *AWS DynamoDB* como base de dados tendo as tabelas *heimdall-users-{nome_do_ambiente}* para os usuários e *heimdall-v2-permissions-{nome_do_ambiente}* para as permissões do mesmo.  
+O controle de usuários do Heimdall utiliza o *AWS DynamoDB* como base de dados tendo as tabelas *heimdall-users-{nome_do_ambiente}* para os usuários e *heimdall-v2-permissions-{nome_do_ambiente}* para as permissões do mesmo.
   
 
-### Os usuarios podem ser criados a partir de duas rotas:
+### Os usuários podem ser criados a partir de duas rotas:
 
 > /v2/marketplaces/{marketplace_id}/users
-- Cria usuarios com acesso ao marketplace selecionado
+- Cria usuários com acesso ao marketplace selecionado
 > 
 > /v2/marketplaces/{marketplace_id}/sellers/{seller_id}users
 
-- Cria usuarios com acesso ao seller selecionado.
-  
-  
+- Cria usuários com acesso ao seller selecionado.
+
 
 Exemplo de body - json.
 ```
@@ -27,37 +25,25 @@ Exemplo de body - json.
 ```
 
 
-  
 ```mermaid
   graph TD  
   
     %% PRE-LAUNCH SETUP" FLOW CHART SHAPES  
-    START["cria<br>usuario"]  
-    EXIST_MKTPLC?{Marketplace<br>existe?}  
-    EXIST_USER?{usuario ja<br>existe na<br>base?}  
-    GENERATE_ID[gera Id<br>de usuario]  
-    USER_FOR_SELLER?{usuario<br>esta sendo<br>criado para<br>seller?}  
-    SELLER_IS_VALID?{seller eh<br>valido?}  
-    PERSIST_USER[/persiste<br>permissoes<br>de usuario/]  
-    UPDATE_USER_DFLAG_0[/persiste usuario<br>com status 'aguardando<br>confirmacao de registro'<br>-dflag=0-/]  
-    CREATE_SESSION(cria<br>sessao)  
-    UPDATE_USER_MAIL[/atualiza usuario com<br>dados do convite<br> - id de sessao e<br>status requested -/]  
-    SEND_MAIL(envia convite para <br>usuario cadastrado.)  
+    START["criar<br>usuário"]  
+    EXIST_USER?{usuário ja<br>existe na<br>base?}  
+    PERSIST_USER[/persiste<br>permissoes<br>de usuário/]  
+    UPDATE_USER_DFLAG_0[/persiste usuário<br>com status 'aguardando<br>confirmacao de registro'<br>-dflag=0-/]  
+    CREATE_SESSION(cria<br>sessão)  
+    UPDATE_USER_MAIL[/adiciona ao usuário <br>dados do convite<br> - id de sessão e<br>status requested./]  
+    SEND_MAIL(envia convite para <br>usuário cadastrado.)  
     END[FIM]  
   
     %% CREATE FLOW CHART  
-    subgraph FLUXO DE CRIAÇÃO DE USUARIO  
-    START --> EXIST_MKTPLC?  
-    EXIST_MKTPLC? --> |sim| EXIST_USER?  
-    EXIST_USER? -->|nao| GENERATE_ID  
-    EXIST_MKTPLC? --> |sim| END  
-    EXIST_USER? --> |nao| END  
-    USER_FOR_SELLER? --> |nao| PERSIST_USER  
-    GENERATE_ID --> USER_FOR_SELLER?  
-    USER_FOR_SELLER? --> |sim| SELLER_IS_VALID?  
-    SELLER_IS_VALID? --> |sim| PERSIST_USER  
+    subgraph FLUXO DE CRIAÇÃO DE usuário  
+    START --> EXIST_USER?  
+    EXIST_USER? -->|nao| PERSIST_USER  
+    EXIST_USER? --> |sim| END  
     PERSIST_USER --> UPDATE_USER_DFLAG_0  
-    SELLER_IS_VALID? --> |nao| END  
     UPDATE_USER_DFLAG_0 --> CREATE_SESSION  
     CREATE_SESSION --> UPDATE_USER_MAIL  
     UPDATE_USER_MAIL --> SEND_MAIL  
@@ -66,9 +52,9 @@ Exemplo de body - json.
 ```
 
 
-## Fluxo de criacao de usuario.
+## Fluxo de criacao de usuário.
 
-Ao criar um novo usuário, Inicialmente é verificada a existência do marketplace na base. Após confirmação, verifica se já não existe associado a esse marketplace o nome de usuário que está se tentando criar. Se o usuário estiver sendo criado para um seller, é verificado se o seller é válido (Obs.: se alguma das verificações não der o resultado esperado, o processo é cancelado e o usuário não é criado).
+Ao criar um novo usuário, Inicialmente é verificado se já não existe associado ao marketplace o nome de usuário que está se tentando criar.(Obs.: se a verificaçãos não der o resultado esperado, o processo é cancelado e o usuário não é criado).
 
 O usuário é persistido com status “aguardando confirmação de registro” (dflag=0). As permissões do usuário também são persistidas na base.
 
@@ -80,11 +66,13 @@ O usuário é persistido com status “aguardando confirmação de registro” (
       "marketplace_id:  "0162893710a6495e86542eeff192baa1"  
       "origin":  "heimdall"  
       "profile":  {
-          "first_name":  "Usuario"
+          "first_name":  "usuário"
           "last_name":  "Valido Heimdall V2"
      }
 }
 ```
+
+## Fluxo de ativação do usuário
 Após essa etapa, o futuro usuário receberá uma email o convidando a criar uma conta no Checkout Marketplace.
 
 Ao confirmar a criação de conta, sua solicitação irá para a rota `/v2/marketplaces/{marketplace_id}/users/{user_id}/confirm-invitation`
@@ -100,27 +88,28 @@ exemplo de body - json.
       "confirm_password":  "Zoop@"
 }
 ```
+Nesse ponto, será verificada a validade da sessão e se confirmada a memsma é encerrada (excluída da base) e o usuário tem seu status atualizado para “registro ativo” (dflag=1), é adicionado ao histórico de convites uma ocorrência com o id da sessão com o status “consumed” e tem sua nova senha adicionada a seu registro, retornando 204.
+  
+
 
 ``` mermaid
   graph TD  
   
     %% PRE-LAUNCH SETUP" FLOW CHART SHAPES  
-    RECEIVED_EMAIL["validar<br>usuario"]  
-    VALID_SESSION?{sessao<br>eh valida?}  
-    VALID_MARKETPLACE?{marketplace<br>eh valido?}  
-    END_SESSION[/encerra sessao/]  
-    UPDATE_USER_DFLAG_1[/atualiza usuario<br>para status ativo<br> -dflag=1-/]  
-    INVITE_CONSUMED[/atualiza usuario com<br> novos dados do convite<br>-status=consumed-/]  
+    RECEIVED_EMAIL["validar<br>usuário"]  
+    VALID_SESSION?{sessão<br>é válida?}  
+
+    END_SESSION[/encerra sessão/]  
+    UPDATE_USER_DFLAG_1[/atualiza usuário<br>para status ativo<br> -dflag=1-/]  
+    INVITE_CONSUMED[/atualiza usuário com<br> novos dados do convite<br>-status=consumed-/]  
     PASSWORD_PERSIST[/persiste <br>nova senha/]  
-    FINISH(fim)  
+    FINISH(FIM)  
     
     %% CREATE FLOW CHART  
-    subgraph FLUXO DE VALIDAÇÃO DE USUARIO  
+    subgraph FLUXO DE VALIDAÇÃO DE USUÁRIO  
     RECEIVED_EMAIL --> VALID_SESSION?  
-    VALID_SESSION? --> |sim| VALID_MARKETPLACE?  
+    VALID_SESSION? --> |sim| END_SESSION  
     VALID_SESSION? --> |nao| FINISH  
-    VALID_MARKETPLACE? --> |sim| END_SESSION  
-    VALID_MARKETPLACE? --> |nao| FINISH  
     END_SESSION --> UPDATE_USER_DFLAG_1  
     UPDATE_USER_DFLAG_1 --> INVITE_CONSUMED  
     INVITE_CONSUMED --> PASSWORD_PERSIST  
@@ -129,8 +118,9 @@ exemplo de body - json.
 ```
 
 
-Nesse ponto, será verificada a validade da sessão e do marketplace. A sessão é encerrada (excluída da base) e o usuário tem seu status atualizado para “registro ativo” (dflag=1), é adicionado ao histórico de convites uma ocorrência com o id da sessão com o status “consumed” e tem sua nova senha adicionada a seu registro, retornando 204.
-  
+___
+___
+___
   
 <a id="ancora1"></a>  
 ## O Envio do e-mail de convite 
